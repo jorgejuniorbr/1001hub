@@ -15,17 +15,21 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-// Menu Superior (Header) com IDs ajustados e interativos
 function Header() {
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    } else {
-      // Se não achar o ID exato, tenta procurar por seções comuns na página
-      const fallback = document.querySelector(id) ||
-document.querySelector(`[data-section="${id}"]`);
-      if (fallback) fallback.scrollIntoView({ behavior: "smooth" });
+  // Função ultra-inteligente para rolar a página baseada no texto que
+o usuário vê
+  const scrollToSectionByText = (textToFind: string) => {
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3,
+h4, span, p"));
+
+    // Procura na página algum título que tenha a palavra que clicamos
+(ex: "works", "plan", "ranking")
+    const target = headings.find(el =>
+      el.textContent?.toLowerCase().includes(textToFind.toLowerCase())
+    );
+
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -44,23 +48,24 @@ tracking-wider">1001HUB</span>
         <a href="#" onClick={(e) => { e.preventDefault();
 window.scrollTo({ top: 0, behavior: 'smooth' }); }}
 className="hover:text-white transition-colors">Home</a>
-        <a href="#how-it-works" onClick={(e) => { e.preventDefault();
-scrollToSection('how-it-works'); }} className="hover:text-white
+        <a href="#" onClick={(e) => { e.preventDefault();
+scrollToSectionByText('how it works'); }} className="hover:text-white
 transition-colors">How it works</a>
-        <a href="#rankings" onClick={(e) => { e.preventDefault();
-scrollToSection('rankings'); }} className="hover:text-white
+        <a href="#" onClick={(e) => { e.preventDefault();
+scrollToSectionByText('dj rankings'); }} className="hover:text-white
 transition-colors">Global DJ Rankings</a>
-        <a href="#pricing" onClick={(e) => { e.preventDefault();
-scrollToSection('pricing'); }} className="hover:text-white
+        <a href="#" onClick={(e) => { e.preventDefault();
+scrollToSectionByText('one plan'); }} className="hover:text-white
 transition-colors">Pricing</a>
-        <a href="#faq" onClick={(e) => { e.preventDefault();
-scrollToSection('faq'); }} className="hover:text-white
+        <a href="#" onClick={(e) => { e.preventDefault();
+scrollToSectionByText('frequently'); }} className="hover:text-white
 transition-colors">FAQ</a>
       </nav>
 
       <a
-        href="#pricing"
-        onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}
+        href="#"
+        onClick={(e) => { e.preventDefault();
+scrollToSectionByText('one plan'); }}
         className="bg-emerald-500 hover:bg-emerald-400 text-black
 text-sm font-semibold py-2 px-4 rounded-full transition-all
 text-center"
@@ -71,7 +76,6 @@ text-center"
   );
 }
 
-// Rodapé (Footer)
 function Footer() {
   return (
     <footer className="w-full py-8 px-6 border-t border-zinc-800

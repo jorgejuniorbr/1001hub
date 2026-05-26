@@ -1,0 +1,2136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MVT — Music Vault Tracker</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN (Funciona em file:// por tag script padrão) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: "#09090b",
+            foreground: "#fafafa",
+            card: "#18181b",
+            "card-foreground": "#fafafa",
+            border: "#27272a",
+            violetAccent: "#8b5cf6",
+            violetAccentHover: "#7c3aed",
+          },
+          fontFamily: {
+            outfit: ["Outfit", "sans-serif"],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer base {
+      body {
+        @apply bg-[#09090b] text-[#fafafa] font-outfit overflow-x-hidden;
+        background-image: radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+                          radial-gradient(circle at 100% 100%, rgba(124, 58, 237, 0.05) 0%, transparent 40%);
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        @apply w-1.5 h-1.5;
+      }
+      ::-webkit-scrollbar-track {
+        @apply bg-[#09090b];
+      }
+      ::-webkit-scrollbar-thumb {
+        @apply bg-[#27272a] rounded-sm;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        @apply bg-[#3f3f46];
+      }
+    }
+
+    .glass {
+      background: rgba(24, 24, 27, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    
+    .glass-card {
+      background: rgba(24, 24, 27, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-alert {
+      animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-[#09090b] text-[#fafafa] min-h-screen">
+
+  <!-- APLICAÇÃO CONTAINER -->
+  <div id="app" class="flex h-screen overflow-hidden">
+    <!-- O Javascript irá renderizar a interface aqui -->
+    <div class="flex items-center justify-center w-full h-full text-zinc-400">
+      <div class="text-center space-y-2">
+        <div class="w-8 h-8 border-2 border-violetAccent border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-sm font-medium">Carregando painel operacional MVT...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT VANILLA - 100% AUTOSSUFICIENTE, SEM COMPILAÇÃO -->
+  <script>
+    // --- ICONES SVG EM EMBUTIDOS (Offline-first / Sem dependência externa) ---
+    const ICONS = {
+      dashboard: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="10" rx="1"/><rect width="7" height="5" x="3" y="14" rx="1"/></svg>`,
+      placements: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2H2v10h10V2zM22 12H12v10h10V12zM12 12H2v10h10V12zM22 2H12v10h10V2z"/></svg>`,
+      clients: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      tracks: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+      lists: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>`,
+      curators: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+      reports: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>`,
+      alert: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`,
+      copy: `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+      check: `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+      externalLink: `<svg class="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>`,
+      plus: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>`,
+      download: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
+      close: `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`
+    };
+
+    // --- REGRA DE CÁLCULO MATEMÁTICO ---
+    function calculatePlacement({ requestedDeliveries, marginPercentage = 5, averageDailyDeliveries, entryDate }) {
+      const deliveriesWithMargin = Math.ceil(requestedDeliveries * (1 + marginPercentage / 100));
+      if (averageDailyDeliveries <= 0) {
+        return { deliveriesWithMargin, requiredDays: 0, estimatedExitDate: entryDate, estimatedDeliveries: 0 };
+      }
+      const requiredDays = Math.ceil(deliveriesWithMargin / averageDailyDeliveries);
+      const entryDateObj = new Date(entryDate + 'T12:00:00');
+      const exitDateObj = new Date(entryDateObj.getTime());
+      exitDateObj.setDate(entryDateObj.getDate() + requiredDays);
+      const estimatedExitDate = exitDateObj.toISOString().split('T')[0];
+      const estimatedDeliveries = requiredDays * averageDailyDeliveries;
+      return { deliveriesWithMargin, requiredDays, estimatedExitDate, estimatedDeliveries };
+    }
+
+    function getOperationalStatus({ estimatedExitDate, realExitDate, isRemoved, currentDateStr }) {
+      if (isRemoved || realExitDate) return 'REMOVIDA';
+      const current = new Date(currentDateStr + 'T00:00:00');
+      const exit = new Date(estimatedExitDate + 'T00:00:00');
+      const diffTime = exit.getTime() - current.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) return 'ATRASADA';
+      if (diffDays === 0) return 'REMOVER_HOJE';
+      if (diffDays > 0 && diffDays <= 3) return 'PROXIMA_REMOCAO';
+      return 'ATIVA';
+    }
+
+    // --- DADOS SEED ---
+    const INITIAL_CLIENTS = [
+      { id: 'c1', name: 'Som Livre S.A.', email: 'contato@somlivre.com.br', whatsapp: '+55 (11) 99999-1111', company: 'Som Livre', notes: 'Cliente premium de lançamentos eletrônicos', status: 'active', created_at: '2026-01-10T10:00:00Z' },
+      { id: 'c2', name: 'Universal Music BR', email: 'labels@universalmusic.com', whatsapp: '+55 (21) 98888-2222', company: 'Universal Music Group', notes: 'Campanhas de catálogo e novos artistas pop', status: 'active', created_at: '2026-02-15T14:30:00Z' },
+      { id: 'c3', name: 'DJ Léo & Crew', email: 'djleo@example.com', whatsapp: '+55 (11) 97777-3333', company: 'Crew Records', notes: 'Independente, campanhas frequentes menores', status: 'paused', created_at: '2026-03-01T18:00:00Z' }
+    ];
+
+    const INITIAL_CURATORS = [
+      { id: 'cur1', name: 'Roberto Dantas', email: 'roberto@curadoriamusical.com', whatsapp: '+55 (11) 91111-4444', country: 'Brasil', city: 'São Paulo', notes: 'Curador de listas dance, eletro e pop eletrônico', status: 'active', created_at: '2026-01-15T09:00:00Z' },
+      { id: 'cur2', name: 'Sarah Jenkins', email: 'sarah.j@beatsvault.co.uk', whatsapp: '+44 7911 123456', country: 'Reino Unido', city: 'Londres', notes: 'Responsável por listas de house music internacional', status: 'active', created_at: '2026-02-20T11:00:00Z' }
+    ];
+
+    const INITIAL_LISTS = [
+      { id: 'l1', name: 'DANCE 2026', external_url: 'https://exemplo.com/list/dance2026', category: 'Electronic / Dance', curator_id: 'cur1', status: 'active', notes: 'A lista dance principal com 120 posições', created_at: '2026-01-16T10:00:00Z' },
+      { id: 'l2', name: 'HOUSE GOLDEN BEATS', external_url: 'https://exemplo.com/list/housegolden', category: 'Deep House / Tech House', curator_id: 'cur2', status: 'active', notes: 'Lista focada em batidas de club house', created_at: '2026-02-22T10:00:00Z' }
+    ];
+
+    const DANCE_DELIVERIES = {
+      1: 2000, 2: 1700, 3: 1600, 4: 1500, 5: 1400, 6: 1320, 7: 1250, 8: 1200, 9: 1150, 10: 1100,
+      11: 1060, 12: 1020, 13: 980, 14: 940, 15: 900, 16: 870, 17: 840, 18: 810, 19: 780, 20: 750,
+      21: 730, 22: 710, 23: 690, 24: 670, 25: 650, 26: 630, 27: 610, 28: 590, 29: 570, 30: 550,
+      31: 535, 32: 520, 33: 505, 34: 490, 35: 475, 36: 460, 37: 445, 38: 430, 39: 415, 40: 400,
+      41: 390, 42: 380, 43: 370, 44: 360, 45: 350, 46: 340, 47: 330, 48: 320, 49: 310, 50: 300,
+      51: 290, 52: 280, 53: 270, 54: 260, 55: 250, 56: 240, 57: 230, 58: 220, 59: 210, 60: 200,
+      61: 510, 62: 500, 63: 490, 64: 480, 65: 470, 66: 460, 67: 450, 68: 440, 69: 430, 70: 420,
+      71: 410, 72: 400, 73: 390, 74: 380, 75: 370, 76: 360, 77: 350, 78: 340, 79: 330, 80: 320,
+      81: 310, 82: 300, 83: 290, 84: 280, 85: 270, 86: 260, 87: 250, 88: 245, 89: 240, 90: 235,
+      91: 230, 92: 225, 93: 220, 94: 215, 95: 210, 96: 205, 97: 200, 98: 195, 99: 190, 100: 185,
+      101: 180, 102: 175, 103: 170, 104: 165, 105: 160, 106: 155, 107: 150, 108: 145, 109: 140,
+      110: 135, 111: 130, 112: 125, 113: 120, 114: 117, 115: 114, 116: 111, 117: 108, 118: 105,
+      119: 102, 120: 100
+    };
+
+    const INITIAL_POSITIONS = [];
+    for (let i = 1; i <= 120; i++) {
+      INITIAL_POSITIONS.push({
+        id: `pos_l1_${i}`,
+        list_id: 'l1',
+        position_label: `TOP ${i}`,
+        position_number: i,
+        average_daily_deliveries: DANCE_DELIVERIES[i] || 100,
+        status: 'active',
+        created_at: '2026-01-16T10:05:00Z'
+      });
+    }
+    for (let i = 1; i <= 20; i++) {
+      INITIAL_POSITIONS.push({
+        id: `pos_l2_${i}`,
+        list_id: 'l2',
+        position_label: `TOP ${i}`,
+        position_number: i,
+        average_daily_deliveries: Math.round((1000 - i * 40) / 10) * 10,
+        status: 'active',
+        created_at: '2026-02-22T10:05:00Z'
+      });
+    }
+
+    const INITIAL_TRACKS = [
+      { id: 't1', client_id: 'c1', artist_name: 'DJTEST', track_name: 'MUSIC TESTE', version: 'Radio Edit', external_url: 'https://exemplo.com/track/djtest-musicteste-radioedit', category: 'Electronic / Dance', received_date: '2026-05-23', requested_deliveries: 5000, status: 'delivering', notes: 'Música de teste padrão para validação do cálculo de 27 dias.' },
+      { id: 't2', client_id: 'c2', artist_name: 'Lara Santos', track_name: 'Verão Infinito', version: 'Remix', external_url: 'https://exemplo.com/track/larasantos-veraoinfinito-remix', category: 'Pop / Dance', received_date: '2026-05-22', requested_deliveries: 10000, status: 'delivering', notes: 'Campanha de lançamento de Verão.' },
+      { id: 't3', client_id: 'c1', artist_name: 'Electro Wave', track_name: 'Neon Lights', version: 'Club Mix', external_url: 'https://exemplo.com/track/electrowave-neonlights-clubmix', category: 'House / Future House', received_date: '2026-05-10', requested_deliveries: 20000, status: 'delivered', notes: 'Entrega finalizada.' },
+      { id: 't4', client_id: 'c3', artist_name: 'The Synth Project', track_name: 'Retro Pulse', version: 'Original', external_url: 'https://exemplo.com/track/thesynth-retropulse', category: 'Retro Synth', received_date: '2026-05-24', requested_deliveries: 2500, status: 'approved', notes: 'Aguardando agendamento.' }
+    ];
+
+    const INITIAL_PLACEMENTS = [
+      { id: 'p1', track_id: 't1', client_id: 'c1', list_id: 'l1', curator_id: 'cur1', position_id: 'pos_l1_33', entry_date: '2026-05-23', requested_deliveries: 5000, margin_percentage: 5, deliveries_with_margin: 5250, average_daily_deliveries: 505, required_days: 11, estimated_exit_date: '2026-06-03', estimated_deliveries: 5555, status: 'active', notes: 'Colocação inicial de teste' },
+      { id: 'p2', track_id: 't2', client_id: 'c2', list_id: 'l1', curator_id: 'cur1', position_id: 'pos_l1_4', entry_date: '2026-05-22', requested_deliveries: 10000, margin_percentage: 5, deliveries_with_margin: 10500, average_daily_deliveries: 1500, required_days: 7, estimated_exit_date: '2026-05-29', estimated_deliveries: 10500, status: 'active', notes: 'Campanha de alta performance' },
+      { id: 'p3', track_id: 't3', client_id: 'c1', list_id: 'l2', curator_id: 'cur2', position_id: 'pos_l2_15', entry_date: '2026-05-10', requested_deliveries: 20000, margin_percentage: 5, deliveries_with_margin: 21000, average_daily_deliveries: 440, required_days: 48, estimated_exit_date: '2026-06-27', estimated_deliveries: 21120, real_exit_date: '2026-05-24', status: 'removed', removal_notes: 'Removida por solicitação de encerramento antecipado.' },
+      { id: 'p4', track_id: 't2', client_id: 'c2', list_id: 'l2', curator_id: 'cur2', position_id: 'pos_l2_10', entry_date: '2026-05-01', requested_deliveries: 4000, margin_percentage: 5, deliveries_with_margin: 4200, average_daily_deliveries: 600, required_days: 7, estimated_exit_date: '2026-05-08', estimated_deliveries: 4200, status: 'active', notes: 'Campanha de teste de atraso.' }
+    ];
+
+    // --- GERENCIADOR DE ESTADO LOCAL ---
+    const getStorageItem = (key, def) => {
+      const data = localStorage.getItem('mvt_' + key);
+      return data ? JSON.parse(data) : def;
+    };
+    const setStorageItem = (key, data) => {
+      localStorage.setItem('mvt_' + key, JSON.stringify(data));
+    };
+
+    const state = {
+      clients: getStorageItem('clients', INITIAL_CLIENTS),
+      curators: getStorageItem('curators', INITIAL_CURATORS),
+      lists: getStorageItem('lists', INITIAL_LISTS),
+      positions: getStorageItem('positions', INITIAL_POSITIONS),
+      tracks: getStorageItem('tracks', INITIAL_TRACKS),
+      placements: getStorageItem('placements', INITIAL_PLACEMENTS),
+      
+      activeTab: 'dashboard',
+      currentDate: '2026-05-24',
+      searchQuery: '',
+      
+      filters: {
+        client: '',
+        list: '',
+        status: ''
+      },
+
+      // Modal e Edições
+      activeModal: null, // 'client', 'curator', 'track', 'list', 'placement', 'import_positions', 'remove_placement'
+      editingItem: null,
+      selectedListForPositions: null,
+      selectedTrackForHistory: null,
+      
+      // Live calculations no formulário
+      form: {
+        trackId: '',
+        listId: '',
+        positionId: '',
+        entryDate: '2026-05-24',
+        marginPercentage: 5,
+        notes: ''
+      }
+    };
+
+    function saveState() {
+      setStorageItem('clients', state.clients);
+      setStorageItem('curators', state.curators);
+      setStorageItem('lists', state.lists);
+      setStorageItem('positions', state.positions);
+      setStorageItem('tracks', state.tracks);
+      setStorageItem('placements', state.placements);
+    }
+
+    // --- CONTROLLER DA INTERFACE ---
+    function navigate(tab) {
+      state.activeTab = tab;
+      state.searchQuery = '';
+      state.filters = { client: '', list: '', status: '' };
+      render();
+    }
+
+    function openModal(modalName, item = null) {
+      state.activeModal = modalName;
+      state.editingItem = item;
+      
+      // Inicializar dados do formulário caso seja nova inclusão (placement)
+      if (modalName === 'placement') {
+        state.form = {
+          trackId: '',
+          listId: '',
+          positionId: '',
+          entryDate: state.currentDate,
+          marginPercentage: 5,
+          notes: ''
+        };
+      }
+      render();
+    }
+
+    function closeModal() {
+      state.activeModal = null;
+      state.editingItem = null;
+      render();
+    }
+
+    // --- AÇÕES CRUD ---
+    function saveClient(e) {
+      e.preventDefault();
+      const form = e.target;
+      const id = form.clientId.value;
+      const client = {
+        name: form.name.value,
+        email: form.email.value,
+        whatsapp: form.whatsapp.value,
+        company: form.company.value,
+        notes: form.notes.value,
+        status: form.status.value,
+      };
+
+      if (id) {
+        state.clients = state.clients.map(c => c.id === id ? { ...c, ...client, updated_at: new Date().toISOString() } : c);
+      } else {
+        state.clients.push({
+          ...client,
+          id: 'c_' + Math.random().toString(36).substr(2, 9),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+      saveState();
+      closeModal();
+    }
+
+    function saveCurator(e) {
+      e.preventDefault();
+      const form = e.target;
+      const id = form.curatorId.value;
+      const curator = {
+        name: form.name.value,
+        email: form.email.value,
+        whatsapp: form.whatsapp.value,
+        country: form.country.value,
+        city: form.city.value,
+        notes: form.notes.value,
+        status: form.status.value,
+      };
+
+      if (id) {
+        state.curators = state.curators.map(c => c.id === id ? { ...c, ...curator, updated_at: new Date().toISOString() } : c);
+      } else {
+        state.curators.push({
+          ...curator,
+          id: 'cur_' + Math.random().toString(36).substr(2, 9),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+      saveState();
+      closeModal();
+    }
+
+    function saveTrack(e) {
+      e.preventDefault();
+      const form = e.target;
+      const id = form.trackId.value;
+      const external_url = form.externalUrl.value;
+
+      // Validação anti-duplicidade
+      const isDuplicate = state.tracks.some(t => t.external_url === external_url && t.id !== id);
+      if (isDuplicate) {
+        alert('Erro: Já existe uma música cadastrada com este link externo.');
+        return;
+      }
+
+      const track = {
+        client_id: form.clientId.value,
+        artist_name: form.artistName.value,
+        track_name: form.trackName.value,
+        version: form.version.value,
+        external_url,
+        category: form.category.value,
+        received_date: form.receivedDate.value,
+        requested_deliveries: parseInt(form.requestedDeliveries.value, 10),
+        status: form.status.value,
+        notes: form.notes.value,
+      };
+
+      if (id) {
+        state.tracks = state.tracks.map(t => t.id === id ? { ...t, ...track, updated_at: new Date().toISOString() } : t);
+      } else {
+        state.tracks.push({
+          ...track,
+          id: 't_' + Math.random().toString(36).substr(2, 9),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+      saveState();
+      closeModal();
+    }
+
+    function saveList(e) {
+      e.preventDefault();
+      const form = e.target;
+      const id = form.listId.value;
+      const list = {
+        name: form.name.value,
+        curator_id: form.curatorId.value,
+        category: form.category.value,
+        status: form.status.value,
+        external_url: form.externalUrl.value,
+        notes: form.notes.value,
+      };
+
+      if (id) {
+        state.lists = state.lists.map(l => l.id === id ? { ...l, ...list, updated_at: new Date().toISOString() } : l);
+      } else {
+        state.lists.push({
+          ...list,
+          id: 'l_' + Math.random().toString(36).substr(2, 9),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+      saveState();
+      closeModal();
+    }
+
+    function addManualPosition(e) {
+      e.preventDefault();
+      const form = e.target;
+      const listId = state.selectedListForPositions.id;
+      const label = form.posLabel.value.trim();
+      const avg = parseInt(form.posAverage.value, 10);
+      const num = form.posNum.value ? parseInt(form.posNum.value, 10) : 0;
+
+      const currentListPositions = state.positions.filter(p => p.list_id === listId);
+      if (currentListPositions.length >= 120) {
+        alert('Erro: Esta lista atingiu o limite de 120 posições.');
+        return;
+      }
+
+      const exists = currentListPositions.some(p => p.position_label.toLowerCase() === label.toLowerCase());
+      if (exists) {
+        alert('Erro: Já existe uma posição com este nome.');
+        return;
+      }
+
+      state.positions.push({
+        id: 'pos_' + Math.random().toString(36).substr(2, 9),
+        list_id: listId,
+        position_label: label,
+        position_number: num || (currentListPositions.length + 1),
+        average_daily_deliveries: avg,
+        status: 'active',
+        created_at: new Date().toISOString()
+      });
+
+      saveState();
+      form.reset();
+      render();
+    }
+
+    function deletePosition(posId) {
+      state.positions = state.positions.filter(p => p.id !== posId);
+      saveState();
+      render();
+    }
+
+    function importPositionsBulk(e) {
+      e.preventDefault();
+      const text = e.target.bulkText.value.trim();
+      const listId = state.selectedListForPositions.id;
+      if (!text) return;
+
+      const currentListPositions = state.positions.filter(p => p.list_id === listId);
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      if (currentListPositions.length + lines.length > 120) {
+        alert(`Erro: A importação excede o limite. A lista já possui ${currentListPositions.length} posições. Limite máximo: 120.`);
+        return;
+      }
+
+      let successCount = 0;
+      lines.forEach((line) => {
+        try {
+          const parts = line.split(/[;,—\t]| - /).map(p => p.trim());
+          let label = '';
+          let delivStr = '';
+
+          if (parts.length >= 2) {
+            label = parts[0];
+            delivStr = parts[1];
+          } else {
+            const lastSpace = line.lastIndexOf(' ');
+            if (lastSpace !== -1) {
+              label = line.substring(0, lastSpace).trim();
+              delivStr = line.substring(lastSpace).trim();
+            } else {
+              return;
+            }
+          }
+
+          const avg = parseInt(delivStr.replace(/[^\d]/g, ''), 10);
+          if (isNaN(avg)) return;
+
+          const numMatch = label.match(/\d+/);
+          const num = numMatch ? parseInt(numMatch[0], 10) : (currentListPositions.length + successCount + 1);
+
+          const existIdx = state.positions.findIndex(p => p.list_id === listId && p.position_label.toLowerCase() === label.toLowerCase());
+          const newPos = {
+            id: existIdx !== -1 ? state.positions[existIdx].id : 'pos_' + Math.random().toString(36).substr(2, 9),
+            list_id: listId,
+            position_label: label,
+            position_number: num,
+            average_daily_deliveries: avg,
+            status: 'active',
+            created_at: new Date().toISOString()
+          };
+
+          if (existIdx !== -1) {
+            state.positions[existIdx] = newPos;
+          } else {
+            state.positions.push(newPos);
+          }
+          successCount++;
+        } catch (err) {}
+      });
+
+      saveState();
+      alert(`Importadas ${successCount} posições com sucesso!`);
+      e.target.reset();
+      render();
+    }
+
+    function savePlacement(e) {
+      e.preventDefault();
+      const trackId = state.form.trackId;
+      const listId = state.form.listId;
+      const positionId = state.form.positionId;
+      const entryDate = state.form.entryDate;
+      const marginPercentage = state.form.marginPercentage;
+
+      if (!trackId || !listId || !positionId) {
+        alert('Por favor, selecione a Música, Lista e Posição.');
+        return;
+      }
+
+      const track = state.tracks.find(t => t.id === trackId);
+      const list = state.lists.find(l => l.id === listId);
+      const position = state.positions.find(p => p.id === positionId);
+
+      if (!track || !list || !position) return;
+
+      const calc = calculatePlacement({
+        requestedDeliveries: track.requested_deliveries,
+        marginPercentage,
+        averageDailyDeliveries: position.average_daily_deliveries,
+        entryDate
+      });
+
+      state.placements.unshift({
+        id: 'p_' + Math.random().toString(36).substr(2, 9),
+        track_id: trackId,
+        client_id: track.client_id,
+        list_id: listId,
+        curator_id: list.curator_id,
+        position_id: positionId,
+        entry_date: entryDate,
+        requested_deliveries: track.requested_deliveries,
+        margin_percentage: marginPercentage,
+        deliveries_with_margin: calc.deliveriesWithMargin,
+        average_daily_deliveries: position.average_daily_deliveries, // Snapshot histórico
+        required_days: calc.requiredDays,
+        estimated_exit_date: calc.estimatedExitDate,
+        estimated_deliveries: calc.estimatedDeliveries,
+        status: 'active',
+        notes: state.form.notes,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Atualiza status da música para Delivering
+      state.tracks = state.tracks.map(t => t.id === trackId ? { ...t, status: 'delivering' } : t);
+
+      saveState();
+      closeModal();
+    }
+
+    function handleRemovePlacementSubmit(e) {
+      e.preventDefault();
+      const id = e.target.placementId.value;
+      const notes = e.target.removalNotes.value;
+      const realExitDate = e.target.realExitDate.value;
+
+      state.placements = state.placements.map(p => {
+        if (p.id === id) {
+          return {
+            ...p,
+            status: 'removed',
+            real_exit_date: realExitDate,
+            removal_notes: notes,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+
+      // Atualiza status da música se não houver mais alocações ativas
+      const placement = state.placements.find(p => p.id === id);
+      if (placement) {
+        const hasActive = state.placements.some(p => p.id !== id && p.track_id === placement.track_id && p.status === 'active');
+        if (!hasActive) {
+          state.tracks = state.tracks.map(t => t.id === placement.track_id ? { ...t, status: 'delivered' } : t);
+        }
+      }
+
+      saveState();
+      closeModal();
+    }
+
+    // --- COPIAR E EXPORTAR ---
+    function copyWhatsAppMessage(placementId) {
+      const placement = state.placements.find(p => p.id === placementId);
+      if (!placement) return;
+      const track = state.tracks.find(t => t.id === placement.track_id);
+      const list = state.lists.find(l => l.id === placement.list_id);
+      const curator = state.curators.find(c => c.id === placement.curator_id);
+      const curatorName = curator ? curator.name : 'Curador';
+
+      const msg = `Olá ${curatorName}, tudo bem?\nPor favor, remova a música "${track ? track.artist_name + ' - ' + track.track_name : 'Música'}" da lista "${list ? list.name : 'Lista'}" na posição com média diária de ${placement.average_daily_deliveries} d/dia. Muito obrigado!`;
+      
+      navigator.clipboard.writeText(msg);
+      alert('Mensagem copiada para a área de transferência!');
+    }
+
+    function exportToCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+      const headers = ["Música", "Cliente", "Lista", "Média Posição", "Data Entrada", "Data Saída Estimada", "Entregas Solicitadas", "Entregas Estimadas", "Status"];
+      csvContent += headers.join(",") + "\n";
+
+      state.placements.forEach(p => {
+        const track = state.tracks.find(t => t.id === p.track_id);
+        const client = state.clients.find(c => c.id === p.client_id);
+        const list = state.lists.find(l => l.id === p.list_id);
+        const row = [
+          track ? `${track.artist_name} - ${track.track_name}` : 'N/A',
+          client ? client.name : 'N/A',
+          list ? list.name : 'N/A',
+          p.average_daily_deliveries,
+          p.entry_date,
+          p.estimated_exit_date,
+          p.requested_deliveries,
+          p.estimated_deliveries,
+          p.status === 'active' ? 'Ativa' : 'Removida'
+        ];
+        csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",") + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "mvt_placements_report.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // --- CONTROLE DE ALTERAÇÕES DO FORM DE INCLUSÃO (Live calculations) ---
+    function updateFormLive(field, val) {
+      state.form[field] = val;
+      
+      // Recalcular e exibir se campos chaves estiverem presentes
+      const track = state.tracks.find(t => t.id === state.form.trackId);
+      const position = state.positions.find(p => p.id === state.form.positionId);
+      const calcPanel = document.getElementById('formCalcPanel');
+      
+      if (track && position && calcPanel) {
+        const calc = calculatePlacement({
+          requestedDeliveries: track.requested_deliveries,
+          marginPercentage: Number(state.form.marginPercentage),
+          averageDailyDeliveries: position.average_daily_deliveries,
+          entryDate: state.form.entryDate
+        });
+        
+        calcPanel.innerHTML = `
+          <div class="p-4 bg-violetAccent/5 border border-violetAccent/20 rounded-xl space-y-2.5">
+            <h4 class="text-xs font-bold text-violetAccent flex items-center gap-1.5">
+              ${ICONS.copy} Cálculo Estimado de Operação
+            </h4>
+            <div class="grid grid-cols-2 gap-3 text-[11px] text-zinc-300">
+              <div>Entregas com Margem: <span class="font-bold text-white">${calc.deliveriesWithMargin.toLocaleString()}</span></div>
+              <div>Dias Necessários: <span className="font-bold text-white">${calc.requiredDays} dias</span></div>
+              <div>Data Prevista de Saída: <span className="font-bold text-white">${calc.estimatedExitDate.split('-').reverse().join('/')}</span></div>
+              <div>Entregas Estimadas Finais: <span className="font-bold text-white">${calc.estimatedDeliveries.toLocaleString()}</span></div>
+            </div>
+          </div>
+        `;
+      } else if (calcPanel) {
+        calcPanel.innerHTML = '';
+      }
+    }
+
+    // ==========================================
+    // RENDERIZAÇÃO DA VIEW ATIVA
+    // ==========================================
+    function render() {
+      const container = document.getElementById('app');
+      if (!container) return;
+
+      // Calcular estatísticas e alertas
+      const active = state.placements.filter(p => p.status === 'active');
+      let countRemoverHoje = 0;
+      let countAtrasadas = 0;
+      let countProximas = 0;
+      const todayObj = new Date(state.currentDate + 'T00:00:00');
+
+      const alertsData = { removerHoje: [], proximaRemocao: [], atrasadas: [] };
+      
+      active.forEach(p => {
+        const track = state.tracks.find(t => t.id === p.track_id);
+        const list = state.lists.find(l => l.id === p.list_id);
+        const status = getOperationalStatus({
+          estimatedExitDate: p.estimated_exit_date,
+          isRemoved: false,
+          currentDateStr: state.currentDate
+        });
+
+        const item = {
+          ...p,
+          trackName: track ? `${track.artist_name} - ${track.track_name}` : 'Música Desconhecida',
+          listName: list ? list.name : 'Lista Desconhecida',
+        };
+
+        if (status === 'REMOVER_HOJE') {
+          alertsData.removerHoje.push(item);
+          countRemoverHoje++;
+        } else if (status === 'PROXIMA_REMOCAO') {
+          alertsData.proximaRemocao.push(item);
+          countProximas++;
+        } else if (status === 'ATRASADA') {
+          alertsData.atrasadas.push(item);
+          countAtrasadas++;
+        }
+      });
+
+      const totalEstimatedActive = active.reduce((sum, p) => sum + p.estimated_deliveries, 0);
+      const currentMonthStr = state.currentDate.substring(0, 7);
+      const monthlyDeliveries = state.placements
+        .filter(p => p.entry_date.startsWith(currentMonthStr))
+        .reduce((sum, p) => sum + p.estimated_deliveries, 0);
+
+      // --- LAYOUT ESTRUTURAL PRINCIPAL ---
+      container.innerHTML = `
+        <!-- SIDEBAR -->
+        <div class="w-64 glass h-full flex flex-col border-r border-border p-5 select-none">
+          <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-violetAccent to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violetAccent/20">
+              ${ICONS.tracks}
+            </div>
+            <div>
+              <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">MVT</h1>
+              <p class="text-[10px] text-zinc-500 tracking-wider">MUSIC VAULT TRACKER</p>
+            </div>
+          </div>
+
+          <nav class="flex-1 space-y-1">
+            ${[
+              { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
+              { id: 'placements', name: 'Inclusões Ativas', icon: 'placements' },
+              { id: 'clients', name: 'Clientes', icon: 'clients' },
+              { id: 'tracks', name: 'Músicas', icon: 'tracks' },
+              { id: 'lists', name: 'Listas / Posições', icon: 'lists' },
+              { id: 'curators', name: 'Curadores', icon: 'curators' },
+              { id: 'reports', name: 'Relatórios', icon: 'reports' }
+            ].map(item => `
+              <button
+                onclick="navigate('${item.id}')"
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  state.activeTab === item.id 
+                    ? 'bg-violetAccent/10 text-violetAccent border border-violetAccent/20 font-semibold' 
+                    : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-white'
+                }"
+              >
+                ${ICONS[item.icon]}
+                ${item.name}
+              </button>
+            `).join('')}
+          </nav>
+
+          <div class="border-t border-border pt-4 mt-auto space-y-3">
+            <div class="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-zinc-900/50 border border-border/50">
+              <div class="w-8 h-8 rounded-full bg-violetAccent/20 flex items-center justify-center font-bold text-violetAccent text-xs">
+                ADM
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-white truncate">Administrador</p>
+                <p className="text-[10px] text-zinc-500 truncate">mvt.admin@internal</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between px-2 pt-1 border-t border-border/30">
+              <label class="text-[9px] text-zinc-500 font-bold uppercase">Data Operacional:</label>
+              <input 
+                type="date" 
+                value="${state.currentDate}" 
+                onchange="state.currentDate = this.value; render();" 
+                class="bg-background text-zinc-300 border border-border text-[11px] rounded px-1.5 py-0.5 focus:outline-none focus:border-violetAccent"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN AREA -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+          <header class="glass h-16 flex items-center justify-between px-8 border-b border-border">
+            <h2 class="text-sm font-bold tracking-wider uppercase text-zinc-400">
+              ${state.activeTab === 'dashboard' ? 'Visão Geral Dashboard' : ''}
+              ${state.activeTab === 'placements' ? 'Inclusões Ativas em Listas' : ''}
+              ${state.activeTab === 'clients' ? 'Gerenciamento de Clientes' : ''}
+              ${state.activeTab === 'tracks' ? 'Catálogo de Músicas' : ''}
+              ${state.activeTab === 'lists' ? 'Listas de Distribuição' : ''}
+              ${state.activeTab === 'curators' ? 'Rede de Curadores' : ''}
+              ${state.activeTab === 'reports' ? 'Relatórios e Consolidação' : ''}
+            </h2>
+            <div class="flex items-center gap-4">
+              <span class="text-xs text-zinc-500">Vol. Ativo: <strong class="text-violetAccent">${totalEstimatedActive.toLocaleString()}</strong></span>
+              <div class="h-4 w-px bg-border"></div>
+              <span class="text-[10px] px-2.5 py-1 bg-zinc-800/80 rounded-full border border-border text-zinc-400 font-semibold uppercase tracking-wider">
+                Offline Client
+              </span>
+            </div>
+          </header>
+
+          <main class="flex-1 overflow-y-auto p-8">
+            <div id="tabContent"></div>
+          </main>
+        </div>
+      `;
+
+      // --- RENDERIZAR TAB CORRESPONDENTE ---
+      const tabContent = document.getElementById('tabContent');
+      if (!tabContent) return;
+
+      if (state.activeTab === 'dashboard') {
+        renderDashboard(tabContent, { countRemoverHoje, countAtrasadas, countProximas, totalEstimatedActive, monthlyDeliveries }, alertsData);
+      } else if (state.activeTab === 'placements') {
+        renderPlacements(tabContent);
+      } else if (state.activeTab === 'clients') {
+        renderClients(tabContent);
+      } else if (state.activeTab === 'tracks') {
+        renderTracks(tabContent);
+      } else if (state.activeTab === 'lists') {
+        renderLists(tabContent);
+      } else if (state.activeTab === 'curators') {
+        renderCurators(tabContent);
+      } else if (state.activeTab === 'reports') {
+        renderReports(tabContent);
+      }
+
+      // Renderizar modal ativo se houver
+      renderModal();
+    }
+
+    // ==========================================
+    // RENDER: DASHBOARD CARD & ALERTAS
+    // ==========================================
+    function renderDashboard(target, stats, alerts) {
+      target.innerHTML = `
+        <div class="space-y-8">
+          <!-- CARDS METRICAS -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass p-6 rounded-2xl border border-border">
+              <div class="flex justify-between items-start mb-4">
+                <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Músicas</span>
+                ${ICONS.tracks}
+              </div>
+              <div class="text-3xl font-extrabold tracking-tight mb-1">${state.tracks.length}</div>
+              <p class="text-[11px] text-zinc-500">Músicas registradas</p>
+            </div>
+            
+            <div class="glass p-6 rounded-2xl border border-border">
+              <div class="flex justify-between items-start mb-4">
+                <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Inclusões Ativas</span>
+                ${ICONS.placements}
+              </div>
+              <div class="text-3xl font-extrabold tracking-tight mb-1">${state.placements.filter(p => p.status === 'active').length}</div>
+              <p class="text-[11px] text-zinc-500">Campanhas em execução</p>
+            </div>
+
+            <div class="glass p-6 rounded-2xl border border-green-500/20 text-green-400 bg-green-500/5">
+              <div class="flex justify-between items-start mb-4">
+                <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Remover Hoje</span>
+                ${ICONS.alert}
+              </div>
+              <div class="text-3xl font-extrabold tracking-tight mb-1">${stats.countRemoverHoje}</div>
+              <p class="text-[11px] text-zinc-500">Músicas com saída para hoje</p>
+            </div>
+
+            <div class="glass p-6 rounded-2xl border border-red-500/20 text-red-400 bg-red-500/5 ${stats.countAtrasadas > 0 ? 'pulse-alert' : ''}">
+              <div class="flex justify-between items-start mb-4">
+                <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Atrasadas</span>
+                ${ICONS.alert}
+              </div>
+              <div class="text-3xl font-extrabold tracking-tight mb-1">${stats.countAtrasadas}</div>
+              <p class="text-[11px] text-zinc-500">Ultrapassaram a saída prevista</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- COLUNA ALERTA -->
+            <div class="lg:col-span-2 glass p-6 rounded-2xl space-y-6">
+              <div class="flex justify-between items-center border-b border-border pb-4">
+                <h3 class="font-bold text-zinc-100 flex items-center gap-2">
+                  ${ICONS.alert}
+                  Ações Críticas e Remoções
+                </h3>
+                <span class="text-[10px] bg-violetAccent/10 text-violetAccent border border-violetAccent/20 px-2.5 py-0.5 rounded font-bold">HOJE: ${state.currentDate.split('-').reverse().join('/')}</span>
+              </div>
+
+              ${alerts.atrasadas.length === 0 && alerts.removerHoje.length === 0 && alerts.proximaRemocao.length === 0 ? `
+                <div class="text-center py-12 text-zinc-500 text-sm">
+                  Nenhum alerta operacional ativo. Tudo limpo!
+                </div>
+              ` : `
+                <div class="space-y-4 max-h-[450px] overflow-y-auto pr-2">
+                  <!-- ATRASADAS -->
+                  ${alerts.atrasadas.map(item => `
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl bg-red-950/20 border border-red-500/20">
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[8px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-extrabold uppercase">Atrasada</span>
+                          <h4 class="font-bold text-sm text-zinc-200">${item.trackName}</h4>
+                        </div>
+                        <p class="text-xs text-zinc-400">
+                          Lista: <span class="font-semibold text-zinc-300">${item.listName}</span> • Média Posição: <span class="font-bold text-zinc-300">${item.average_daily_deliveries.toLocaleString()} d/dia</span>
+                        </p>
+                        <p class="text-[10px] text-zinc-500">
+                          Deveria ter saído em: <span class="text-red-400 font-bold">${item.estimated_exit_date.split('-').reverse().join('/')}</span>
+                        </p>
+                      </div>
+                      <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="copyWhatsAppMessage('${item.id}')" class="flex-1 md:flex-none text-xs px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 flex items-center justify-center gap-1.5 transition-colors">
+                          ${ICONS.copy} Copiar Msg
+                        </button>
+                        <button onclick="openModal('remove_placement', '${item.id}')" class="flex-1 md:flex-none text-xs px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center gap-1.5 transition-colors">
+                          ${ICONS.check} Marcar Removido
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+
+                  <!-- REMOVER HOJE -->
+                  ${alerts.removerHoje.map(item => `
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl bg-violetAccent/5 border border-violetAccent/20">
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[8px] bg-violetAccent/20 text-violetAccent border border-violetAccent/30 px-1.5 py-0.5 rounded font-extrabold uppercase">Remover Hoje</span>
+                          <h4 class="font-bold text-sm text-zinc-200">${item.trackName}</h4>
+                        </div>
+                        <p class="text-xs text-zinc-400">
+                          Lista: <span class="font-semibold text-zinc-300">${item.listName}</span> • Média Posição: <span class="font-bold text-zinc-300">${item.average_daily_deliveries.toLocaleString()} d/dia</span>
+                        </p>
+                        <p class="text-[10px] text-zinc-500">
+                          Saída prevista para hoje: <span class="text-violetAccent font-bold">${item.estimated_exit_date.split('-').reverse().join('/')}</span>
+                        </p>
+                      </div>
+                      <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="copyWhatsAppMessage('${item.id}')" class="flex-1 md:flex-none text-xs px-3 py-1.5 rounded-lg border border-violetAccent/30 text-violetAccent hover:bg-violetAccent/10 flex items-center justify-center gap-1.5 transition-colors">
+                          ${ICONS.copy} Copiar Msg
+                        </button>
+                        <button onclick="openModal('remove_placement', '${item.id}')" class="flex-1 md:flex-none text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-black font-bold flex items-center justify-center gap-1.5 transition-colors">
+                          ${ICONS.check} Marcar Removido
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+
+                  <!-- PRÓXIMAS REMOÇÕES -->
+                  ${alerts.proximaRemocao.map(item => `
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/60 border border-border/80">
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[8px] bg-zinc-800 text-zinc-400 border border-border px-1.5 py-0.5 rounded font-extrabold uppercase">Saída Próxima</span>
+                          <h4 class="font-bold text-sm text-zinc-200">${item.trackName}</h4>
+                        </div>
+                        <p class="text-xs text-zinc-400">
+                          Lista: <span class="font-semibold text-zinc-300">${item.listName}</span> • Média Posição: <span class="font-bold text-zinc-300">${item.average_daily_deliveries.toLocaleString()} d/dia</span>
+                        </p>
+                        <p class="text-[10px] text-zinc-500">
+                          Saída prevista em: <span class="text-zinc-300 font-bold">${item.estimated_exit_date.split('-').reverse().join('/')}</span>
+                        </p>
+                      </div>
+                      <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="copyWhatsAppMessage('${item.id}')" class="flex-1 md:flex-none text-xs px-3 py-1.5 rounded-lg border border-border text-zinc-400 hover:bg-zinc-800 flex items-center justify-center gap-1.5 transition-colors">
+                          ${ICONS.copy} Copiar Msg
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+
+            <!-- COLUNA LATERAL DE VOLUMES E AÇÕES RÁPIDAS -->
+            <div class="space-y-6">
+              <div class="glass p-6 rounded-2xl border border-border space-y-4">
+                <h3 class="font-bold text-zinc-100 flex items-center gap-2">
+                  ${ICONS.reports}
+                  Volume de Distribuição
+                </h3>
+                <div class="space-y-4">
+                  <div class="p-4 bg-zinc-900/60 rounded-xl border border-border/50">
+                    <div class="text-[11px] text-zinc-400 uppercase font-semibold">Volume Ativo Estimado</div>
+                    <div class="text-2xl font-bold text-white mt-1">${stats.totalEstimatedActive.toLocaleString()} <span class="text-xs font-normal text-zinc-500">entregas</span></div>
+                  </div>
+                  <div class="p-4 bg-zinc-900/60 rounded-xl border border-border/50">
+                    <div class="text-[11px] text-zinc-400 uppercase font-semibold">Volume do Mês Operacional</div>
+                    <div class="text-2xl font-bold text-white mt-1">${stats.monthlyDeliveries.toLocaleString()} <span class="text-xs font-normal text-zinc-500">entregas</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass p-6 rounded-2xl border border-border space-y-3">
+                <h3 class="font-bold text-zinc-100">Ações Operacionais</h3>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                  <button onclick="openModal('placement')" class="p-3 bg-violetAccent text-white text-xs font-bold rounded-xl hover:bg-violetAccentHover transition-colors flex flex-col items-center gap-2 text-center">
+                    ${ICONS.plus} Nova Inclusão
+                  </button>
+                  <button onclick="openModal('track')" class="p-3 bg-zinc-800 text-zinc-200 text-xs font-bold rounded-xl hover:bg-zinc-700 transition-colors flex flex-col items-center gap-2 text-center">
+                    ${ICONS.tracks} Nova Música
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: INCLUSÕES ATIVAS
+    // ==========================================
+    function renderPlacements(target) {
+      const active = state.placements.filter(p => p.status === 'active');
+      
+      const filtered = active.map(p => {
+        const track = state.tracks.find(t => t.id === p.track_id);
+        const client = state.clients.find(c => c.id === p.client_id);
+        const list = state.lists.find(l => l.id === p.list_id);
+        const position = state.positions.find(pos => pos.id === p.position_id);
+        const opStatus = getOperationalStatus({
+          estimatedExitDate: p.estimated_exit_date,
+          isRemoved: false,
+          currentDateStr: state.currentDate
+        });
+
+        const current = new Date(state.currentDate + 'T00:00:00');
+        const exit = new Date(p.estimated_exit_date + 'T00:00:00');
+        const diffDays = Math.ceil((exit.getTime() - current.getTime()) / (1000 * 60 * 60 * 24));
+
+        return {
+          ...p,
+          trackName: track ? `${track.artist_name} - ${track.track_name}` : 'N/A',
+          clientName: client ? client.name : 'N/A',
+          listName: list ? list.name : 'N/A',
+          positionLabel: position ? position.position_label : 'N/A',
+          opStatus,
+          diffDays
+        };
+      }).filter(item => {
+        const query = state.searchQuery.toLowerCase();
+        const matchesSearch = query === '' || 
+          item.trackName.toLowerCase().includes(query) ||
+          item.clientName.toLowerCase().includes(query) ||
+          item.listName.toLowerCase().includes(query);
+
+        const matchesClient = state.filters.client === '' || item.client_id === state.filters.client;
+        const matchesList = state.filters.list === '' || item.list_id === state.filters.list;
+        const matchesStatus = state.filters.status === '' || item.opStatus === state.filters.status;
+
+        return matchesSearch && matchesClient && matchesList && matchesStatus;
+      });
+
+      target.innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <p class="text-zinc-500 text-xs">Visualize músicas atualmente ativas em listas e controle suas saídas.</p>
+            <button onclick="openModal('placement')" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.plus} Nova Inclusão
+            </button>
+          </div>
+
+          <!-- FILTROS -->
+          <div class="glass p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Buscar música, cliente, lista..."
+                value="${state.searchQuery}"
+                oninput="state.searchQuery = this.value; renderPlacements(document.getElementById('tabContent'));"
+                class="w-full bg-zinc-900/60 border border-border rounded-xl pl-4 pr-4 py-2.5 text-xs focus:outline-none focus:border-violetAccent text-zinc-300"
+              />
+            </div>
+
+            <select 
+              onchange="state.filters.client = this.value; renderPlacements(document.getElementById('tabContent'));"
+              class="bg-zinc-900/60 border border-border rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-violetAccent text-zinc-400"
+            >
+              <option value="">Todos os Clientes</option>
+              ${state.clients.map(c => `<option value="${c.id}" ${state.filters.client === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+            </select>
+
+            <select 
+              onchange="state.filters.list = this.value; renderPlacements(document.getElementById('tabContent'));"
+              class="bg-zinc-900/60 border border-border rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-violetAccent text-zinc-400"
+            >
+              <option value="">Todas as Listas</option>
+              ${state.lists.map(l => `<option value="${l.id}" ${state.filters.list === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}
+            </select>
+
+            <select 
+              onchange="state.filters.status = this.value; renderPlacements(document.getElementById('tabContent'));"
+              class="bg-zinc-900/60 border border-border rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-violetAccent text-zinc-400"
+            >
+              <option value="">Todos os Status</option>
+              <option value="REMOVER_HOJE" ${state.filters.status === 'REMOVER_HOJE' ? 'selected' : ''}>Remover Hoje</option>
+              <option value="PROXIMA_REMOCAO" ${state.filters.status === 'PROXIMA_REMOCAO' ? 'selected' : ''}>Remover Próximos 3d</option>
+              <option value="ATRASADA" ${state.filters.status === 'ATRASADA' ? 'selected' : ''}>Atrasadas</option>
+              <option value="ATIVA" ${state.filters.status === 'ATIVA' ? 'selected' : ''}>Ativa (Ok)</option>
+            </select>
+          </div>
+
+          <!-- TABELA -->
+          <div class="glass rounded-2xl overflow-hidden border border-border">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-zinc-900/50 text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="p-4">Música / Artista</th>
+                    <th class="p-4">Cliente</th>
+                    <th class="p-4">Lista / Posição</th>
+                    <th class="p-4 text-center">Média diária</th>
+                    <th class="p-4 text-center">Dias Restantes</th>
+                    <th class="p-4 text-center">In / Out</th>
+                    <th class="p-4 text-center">Entrega Estimada</th>
+                    <th class="p-4 text-center">Status</th>
+                    <th class="p-4 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  ${filtered.length === 0 ? `
+                    <tr>
+                      <td colSpan="9" class="p-8 text-center text-zinc-500">Nenhuma inclusão ativa correspondente aos filtros.</td>
+                    </tr>
+                  ` : filtered.map(item => `
+                    <tr class="hover:bg-zinc-900/30 transition-colors">
+                      <td class="p-4">
+                        <div class="font-bold text-zinc-200 text-[13px]">${item.trackName}</div>
+                      </td>
+                      <td class="p-4 text-zinc-300">${item.clientName}</td>
+                      <td class="p-4">
+                        <div class="font-semibold text-zinc-300">${item.listName}</div>
+                        <div class="text-violetAccent font-bold text-[9px] mt-0.5">${item.positionLabel}</div>
+                      </td>
+                      <td class="p-4 text-center text-zinc-300 font-semibold">${item.average_daily_deliveries.toLocaleString()}</td>
+                      <td class="p-4 text-center">
+                        ${item.diffDays < 0 ? `<span class="text-red-400 font-bold">Atrasada (${Math.abs(item.diffDays)}d)</span>` :
+                          item.diffDays === 0 ? `<span class="text-green-400 font-bold">Hoje</span>` :
+                          `<span class="text-zinc-300 font-medium">${item.diffDays} dias</span>`}
+                      </td>
+                      <td class="p-4 text-center text-[10px] text-zinc-400 space-y-0.5">
+                        <div>In: ${item.entry_date.split('-').reverse().join('/')}</div>
+                        <div>Out: ${item.estimated_exit_date.split('-').reverse().join('/')}</div>
+                      </td>
+                      <td class="p-4 text-center">
+                        <div class="font-bold text-zinc-200">${item.estimated_deliveries.toLocaleString()}</div>
+                        <div class="text-[9px] text-zinc-500">Meta: ${item.requested_deliveries.toLocaleString()}</div>
+                      </td>
+                      <td class="p-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[8px] ${
+                          item.opStatus === 'ATRASADA' ? 'bg-red-500/10 text-red-400 border border-red-500/20 pulse-alert' :
+                          item.opStatus === 'REMOVER_HOJE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          item.opStatus === 'PROXIMA_REMOCAO' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                          'bg-zinc-800 text-zinc-400'
+                        }">
+                          ${item.opStatus === 'ATIVA' ? 'ATIVA' : item.opStatus.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td class="p-4 text-right">
+                        <button onclick="openModal('remove_placement', '${item.id}')" class="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-border text-zinc-300 font-bold rounded-lg transition-all">
+                          Remover
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: CLIENTES
+    // ==========================================
+    function renderClients(target) {
+      target.innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <p class="text-zinc-500 text-xs">Controle de Clientes cadastrados no Music Vault Tracker.</p>
+            <button onclick="openModal('client')" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.plus} Novo Cliente
+            </button>
+          </div>
+
+          <div class="glass rounded-2xl overflow-hidden border border-border">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-zinc-900/50 text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="p-4">Nome</th>
+                    <th class="p-4">Empresa</th>
+                    <th class="p-4">Contato</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  ${state.clients.map(client => `
+                    <tr class="hover:bg-zinc-900/30 transition-colors">
+                      <td class="p-4 font-bold text-zinc-200 text-sm">${client.name}</td>
+                      <td class="p-4 text-zinc-300">${client.company || 'N/A'}</td>
+                      <td class="p-4 text-zinc-400 space-y-0.5">
+                        <div>Email: ${client.email || 'N/A'}</div>
+                        <div>WhatsApp: ${client.whatsapp || 'N/A'}</div>
+                      </td>
+                      <td class="p-4">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[9px] border ${
+                          client.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                          client.status === 'paused' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                          'bg-zinc-850 text-zinc-500 border-border'
+                        }">${client.status.toUpperCase()}</span>
+                      </td>
+                      <td class="p-4 text-right">
+                        <button onclick="openModal('client', ${JSON.stringify(client).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-400 font-bold rounded-lg transition-all">
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: MÚSICAS
+    // ==========================================
+    function renderTracks(target) {
+      target.innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <p class="text-zinc-500 text-xs">Músicas contratadas e status de distribuição do catálogo.</p>
+            <button onclick="openModal('track')" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.plus} Nova Música
+            </button>
+          </div>
+
+          <div class="glass rounded-2xl overflow-hidden border border-border">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-zinc-900/50 text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="p-4">Artista / Música</th>
+                    <th class="p-4">Cliente Contratante</th>
+                    <th class="p-4 text-center">Meta Contratada</th>
+                    <th class="p-4 text-center">Status</th>
+                    <th class="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  ${state.tracks.map(track => {
+                    const client = state.clients.find(c => c.id === track.client_id);
+                    return `
+                      <tr class="hover:bg-zinc-900/30 transition-colors">
+                        <td class="p-4">
+                          <div class="font-bold text-zinc-200 text-sm">${track.artist_name} — ${track.track_name}</div>
+                          <div class="text-[9.5px] text-zinc-500 mt-1">Versão: ${track.version || 'Original'} • Gênero: ${track.category || 'N/A'}</div>
+                          <a href="${track.external_url}" target="_blank" class="text-[9.5px] text-violetAccent hover:underline inline-flex items-center gap-0.5 mt-1">
+                            Link Externo ${ICONS.externalLink}
+                          </a>
+                        </td>
+                        <td class="p-4 text-zinc-300 font-medium">${client ? client.name : 'N/A'}</td>
+                        <td class="p-4 text-center font-bold text-zinc-300">${track.requested_deliveries.toLocaleString()}</td>
+                        <td class="p-4 text-center">
+                          <span class="px-2 py-0.5 rounded-full font-bold text-[8.5px] border ${
+                            track.status === 'delivering' ? 'bg-violetAccent/10 text-violetAccent border-violetAccent/20' :
+                            track.status === 'delivered' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                            'bg-zinc-800 text-zinc-500 border-border'
+                          }">${track.status.toUpperCase()}</span>
+                        </td>
+                        <td class="p-4 text-right space-x-2">
+                          <button onclick="openHistoryModal('${track.id}')" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg transition-all">
+                            Histórico
+                          </button>
+                          <button onclick="openModal('track', ${JSON.stringify(track).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-400 font-bold rounded-lg transition-all">
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: LISTAS E RANKINGS DE POSIÇÕES
+    // ==========================================
+    function renderLists(target) {
+      target.innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <p class="text-zinc-500 text-xs">Gestão das Listas de Transmissão e suas Posições de entrega.</p>
+            <button onclick="openModal('list')" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.plus} Criar Lista
+            </button>
+          </div>
+
+          <div class="glass rounded-2xl overflow-hidden border border-border">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-zinc-900/50 text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="p-4">Nome da Lista</th>
+                    <th class="p-4">Gênero / Categoria</th>
+                    <th class="p-4">Curador</th>
+                    <th class="p-4 text-center">Posições Configuradas</th>
+                    <th class="p-4 text-center">Status</th>
+                    <th class="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  ${state.lists.map(list => {
+                    const curator = state.curators.find(c => c.id === list.curator_id);
+                    const posCount = state.positions.filter(p => p.list_id === list.id && p.status === 'active').length;
+                    return `
+                      <tr class="hover:bg-zinc-900/30 transition-colors">
+                        <td class="p-4">
+                          <div class="font-bold text-zinc-200 text-sm">${list.name}</div>
+                          ${list.external_url ? `<a href="${list.external_url}" target="_blank" class="text-[9px] text-violetAccent hover:underline">${ICONS.externalLink} Link Externo</a>` : ''}
+                        </td>
+                        <td class="p-4 text-zinc-300">${list.category || 'N/A'}</td>
+                        <td class="p-4 text-zinc-300 font-semibold">${curator ? curator.name : 'N/A'}</td>
+                        <td class="p-4 text-center font-bold text-zinc-300">${posCount} / 120</td>
+                        <td class="p-4 text-center">
+                          <span class="px-2 py-0.5 rounded-full font-bold text-[8.5px] border ${
+                            list.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-zinc-800 text-zinc-500'
+                          }">${list.status.toUpperCase()}</span>
+                        </td>
+                        <td class="p-4 text-right space-x-2">
+                          <button onclick="openPositionsManager('${list.id}')" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg transition-all">
+                            Ver Posições
+                          </button>
+                          <button onclick="openModal('list', ${JSON.stringify(list).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-400 font-bold rounded-lg transition-all">
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: CURADORES
+    // ==========================================
+    function renderCurators(target) {
+      target.innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <p class="text-zinc-500 text-xs">Gestão da rede de curadores parceiros das listas.</p>
+            <button onclick="openModal('curator')" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.plus} Novo Curador
+            </button>
+          </div>
+
+          <div class="glass rounded-2xl overflow-hidden border border-border">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-zinc-900/50 text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="p-4">Nome</th>
+                    <th class="p-4">Contatos</th>
+                    <th class="p-4">Localidade</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  ${state.curators.map(cur => `
+                    <tr class="hover:bg-zinc-900/30 transition-colors">
+                      <td class="p-4 font-bold text-zinc-200 text-sm">${cur.name}</td>
+                      <td class="p-4 text-zinc-300 space-y-0.5">
+                        <div>Email: ${cur.email || 'N/A'}</div>
+                        <div>WhatsApp: ${cur.whatsapp || 'N/A'}</div>
+                      </td>
+                      <td class="p-4 text-zinc-300">${cur.country} ${cur.city ? `(${cur.city})` : ''}</td>
+                      <td class="p-4">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[8.5px] border ${
+                          cur.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-zinc-800 text-zinc-500'
+                        }">${cur.status.toUpperCase()}</span>
+                      </td>
+                      <td class="p-4 text-right">
+                        <button onclick="openModal('curator', ${JSON.stringify(cur).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 border border-border hover:bg-zinc-800 text-zinc-400 font-bold rounded-lg transition-all">
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: RELATÓRIOS E EXPORTAÇÃO CSV
+    // ==========================================
+    function renderReports(target) {
+      // Agrupamentos por Cliente
+      const statsByClient = {};
+      state.placements.forEach(p => {
+        const client = state.clients.find(c => c.id === p.client_id);
+        const name = client ? client.name : 'Desconhecido';
+        if (!statsByClient[name]) statsByClient[name] = { active: 0, total: 0, volume: 0 };
+        if (p.status === 'active') statsByClient[name].active++;
+        statsByClient[name].total++;
+        statsByClient[name].volume += p.estimated_deliveries;
+      });
+
+      // Agrupamentos por Lista
+      const statsByList = {};
+      state.placements.forEach(p => {
+        const list = state.lists.find(l => l.id === p.list_id);
+        const name = list ? list.name : 'Desconhecida';
+        if (!statsByList[name]) statsByList[name] = { active: 0, total: 0, volume: 0 };
+        if (p.status === 'active') statsByList[name].active++;
+        statsByList[name].total++;
+        statsByList[name].volume += p.estimated_deliveries;
+      });
+
+      target.innerHTML = `
+        <div class="space-y-8">
+          <div class="glass p-6 rounded-2xl border border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 class="font-bold text-zinc-100">Exportador Operacional</h3>
+              <p class="text-xs text-zinc-500">Gere e baixe a planilha completa consolidada em arquivo CSV para Excel.</p>
+            </div>
+            <button onclick="exportToCSV()" class="px-5 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-violetAccent/20 transition-all">
+              ${ICONS.download} Exportar Inclusões (CSV)
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Tabela Cliente -->
+            <div class="glass p-6 rounded-2xl border border-border space-y-4">
+              <h4 class="font-bold text-zinc-200 border-b border-border pb-3 flex items-center gap-2">
+                ${ICONS.clients} Desempenho por Cliente
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="text-zinc-500 font-bold text-[9px] uppercase border-b border-border/40 bg-zinc-900/20">
+                      <th class="p-3">Cliente</th>
+                      <th class="p-3 text-center">Ativas</th>
+                      <th class="p-3 text-center">Total</th>
+                      <th class="p-3 text-right">Vol. Estimado</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border/20">
+                    ${Object.entries(statsByClient).map(([name, val]) => `
+                      <tr class="hover:bg-zinc-900/10">
+                        <td class="p-3 font-semibold text-zinc-300">${name}</td>
+                        <td class="p-3 text-center font-bold text-violetAccent">${val.active}</td>
+                        <td class="p-3 text-center text-zinc-400">${val.total}</td>
+                        <td class="p-3 text-right font-bold text-zinc-100">${val.volume.toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tabela Lista -->
+            <div class="glass p-6 rounded-2xl border border-border space-y-4">
+              <h4 class="font-bold text-zinc-200 border-b border-border pb-3 flex items-center gap-2">
+                ${ICONS.lists} Desempenho por Lista
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="text-zinc-500 font-bold text-[9px] uppercase border-b border-border/40 bg-zinc-900/20">
+                      <th class="p-3">Lista</th>
+                      <th class="p-3 text-center">Ativas</th>
+                      <th class="p-3 text-center">Total</th>
+                      <th class="p-3 text-right">Vol. Estimado</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border/20">
+                    ${Object.entries(statsByList).map(([name, val]) => `
+                      <tr class="hover:bg-zinc-900/10">
+                        <td class="p-3 font-semibold text-zinc-300">${name}</td>
+                        <td class="p-3 text-center font-bold text-violetAccent">${val.active}</td>
+                        <td class="p-3 text-center text-zinc-400">${val.total}</td>
+                        <td class="p-3 text-right font-bold text-zinc-100">${val.volume.toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // RENDER: MODALS DE CADASTRO E EDIÇÃO
+    // ==========================================
+    function renderModal() {
+      // Remove qualquer overlay existente antes de renderizar
+      const existing = document.getElementById('modalOverlay');
+      if (existing) existing.remove();
+
+      if (!state.activeModal) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'modalOverlay';
+      overlay.className = 'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4';
+      
+      const item = state.editingItem;
+
+      if (state.activeModal === 'client') {
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-md p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">${item ? 'Editar Cliente' : 'Cadastrar Cliente'}</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            <form onsubmit="saveClient(event)" class="space-y-4">
+              <input type="hidden" name="clientId" value="${item ? item.id : ''}">
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Nome do Cliente</label>
+                <input type="text" name="name" required value="${item ? item.name : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">E-mail</label>
+                  <input type="email" name="email" value="${item ? item.email : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">WhatsApp</label>
+                  <input type="text" name="whatsapp" value="${item ? item.whatsapp : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Empresa / Gravadora</label>
+                  <input type="text" name="company" value="${item ? item.company : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Status</label>
+                  <select name="status" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                    <option value="active" ${item && item.status === 'active' ? 'selected' : ''}>Ativo</option>
+                    <option value="paused" ${item && item.status === 'paused' ? 'selected' : ''}>Pausado</option>
+                    <option value="inactive" ${item && item.status === 'inactive' ? 'selected' : ''}>Inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Observações</label>
+                <textarea name="notes" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-20">${item && item.notes ? item.notes : ''}</textarea>
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Salvar Cliente</button>
+              </div>
+            </form>
+          </div>
+        `;
+      } 
+      
+      else if (state.activeModal === 'curator') {
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-md p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">${item ? 'Editar Curador' : 'Cadastrar Curador'}</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            <form onsubmit="saveCurator(event)" class="space-y-4">
+              <input type="hidden" name="curatorId" value="${item ? item.id : ''}">
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Nome do Curador</label>
+                <input type="text" name="name" required value="${item ? item.name : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">E-mail</label>
+                  <input type="email" name="email" value="${item ? item.email : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">WhatsApp</label>
+                  <input type="text" name="whatsapp" value="${item ? item.whatsapp : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">País</label>
+                  <input type="text" name="country" required value="${item ? item.country : 'Brasil'}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Cidade / UF</label>
+                  <input type="text" name="city" value="${item ? item.city : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Status</label>
+                <select name="status" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                  <option value="active" ${item && item.status === 'active' ? 'selected' : ''}>Ativo</option>
+                  <option value="testing" ${item && item.status === 'testing' ? 'selected' : ''}>Em Teste</option>
+                  <option value="paused" ${item && item.status === 'paused' ? 'selected' : ''}>Pausado</option>
+                  <option value="inactive" ${item && item.status === 'inactive' ? 'selected' : ''}>Inativo</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Observações</label>
+                <textarea name="notes" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-20">${item && item.notes ? item.notes : ''}</textarea>
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Salvar Curador</button>
+              </div>
+            </form>
+          </div>
+        `;
+      } 
+      
+      else if (state.activeModal === 'track') {
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-lg p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">${item ? 'Editar Música' : 'Cadastrar Música'}</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            <form onsubmit="saveTrack(event)" class="space-y-4">
+              <input type="hidden" name="trackId" value="${item ? item.id : ''}">
+              
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Cliente Contratante</label>
+                <select name="clientId" required class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                  <option value="">Selecione o cliente...</option>
+                  ${state.clients.filter(c => c.status === 'active').map(c => `<option value="${c.id}" ${item && item.client_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Artista</label>
+                  <input type="text" name="artistName" required value="${item ? item.artist_name : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Nome da Música</label>
+                  <input type="text" name="trackName" required value="${item ? item.track_name : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Versão</label>
+                  <input type="text" name="version" placeholder="Radio Edit / Remix" value="${item ? item.version : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Gênero / Categoria</label>
+                  <input type="text" name="category" placeholder="Eletrônica" value="${item ? item.category : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Link Externo</label>
+                <input type="url" name="externalUrl" required value="${item ? item.external_url : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+
+              <div class="grid grid-cols-3 gap-4">
+                <div class="col-span-2">
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Entregas Contratadas (Meta)</label>
+                  <input type="number" name="requestedDeliveries" required min="0" value="${item ? item.requested_deliveries : 0}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Recebimento</label>
+                  <input type="date" name="receivedDate" required value="${item ? item.received_date : state.currentDate}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Status de Distribuição</label>
+                  <select name="status" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                    <option value="received" ${item && item.status === 'received' ? 'selected' : ''}>Recebida</option>
+                    <option value="analyzing" ${item && item.status === 'analyzing' ? 'selected' : ''}>Em Análise</option>
+                    <option value="approved" ${item && item.status === 'approved' ? 'selected' : ''}>Aprovada</option>
+                    <option value="delivering" ${item && item.status === 'delivering' ? 'selected' : ''}>Em Entrega</option>
+                    <option value="delivered" ${item && item.status === 'delivered' ? 'selected' : ''}>Entregue</option>
+                    <option value="removed" ${item && item.status === 'removed' ? 'selected' : ''}>Removida</option>
+                    <option value="cancelled" ${item && item.status === 'cancelled' ? 'selected' : ''}>Cancelada</option>
+                  </select>
+                </div>
+                <div class="text-[10px] text-zinc-500 flex items-end pb-2">
+                  A URL previne cadastros duplicados no sistema.
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Notas</label>
+                <textarea name="notes" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-16">${item && item.notes ? item.notes : ''}</textarea>
+              </div>
+
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Salvar Música</button>
+              </div>
+            </form>
+          </div>
+        `;
+      } 
+      
+      else if (state.activeModal === 'list') {
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-md p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">${item ? 'Editar Lista' : 'Criar Lista'}</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            <form onsubmit="saveList(event)" class="space-y-4">
+              <input type="hidden" name="listId" value="${item ? item.id : ''}">
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Nome da Lista</label>
+                <input type="text" name="name" required value="${item ? item.name : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Curador Responsável</label>
+                <select name="curatorId" required class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                  <option value="">Selecione o curador...</option>
+                  ${state.curators.filter(c => c.status === 'active').map(c => `<option value="${c.id}" ${item && item.curator_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Gênero / Categoria</label>
+                  <input type="text" name="category" value="${item ? item.category : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Status</label>
+                  <select name="status" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                    <option value="active" ${item && item.status === 'active' ? 'selected' : ''}>Ativa</option>
+                    <option value="paused" ${item && item.status === 'paused' ? 'selected' : ''}>Pausada</option>
+                    <option value="inactive" ${item && item.status === 'inactive' ? 'selected' : ''}>Inativa</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Link Externo da Lista</label>
+                <input type="url" name="externalUrl" value="${item && item.external_url ? item.external_url : ''}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Observações</label>
+                <textarea name="notes" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-16">${item && item.notes ? item.notes : ''}</textarea>
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Salvar Lista</button>
+              </div>
+            </form>
+          </div>
+        `;
+      } 
+      
+      else if (state.activeModal === 'placement') {
+        const activeTracks = state.tracks.filter(t => t.status !== 'delivered' && t.status !== 'removed' && t.status !== 'cancelled');
+        const activeLists = state.lists.filter(l => l.status === 'active');
+        
+        // Posições da lista selecionada no form
+        const currentListId = state.form.listId;
+        const currentPositions = state.positions.filter(pos => pos.list_id === currentListId && pos.status === 'active');
+
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-lg p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">Nova Inclusão de Música em Lista</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            
+            <form onsubmit="savePlacement(event)" class="space-y-4">
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Música</label>
+                <select name="trackId" required onchange="updateFormLive('trackId', this.value)" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                  <option value="">Selecione a música...</option>
+                  ${activeTracks.map(t => `<option value="${t.id}">${t.artist_name} - ${t.track_name} (Meta: ${t.requested_deliveries.toLocaleString()})</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Lista</label>
+                <select name="listId" required onchange="updateFormLive('listId', this.value); renderModal();" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1">
+                  <option value="">Selecione a lista...</option>
+                  ${activeLists.map(l => `<option value="${l.id}" ${state.form.listId === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Posição</label>
+                <select name="positionId" required onchange="updateFormLive('positionId', this.value)" ${!currentListId ? 'disabled' : ''} class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none focus:border-violetAccent mt-1 disabled:opacity-40">
+                  <option value="">Selecione a posição...</option>
+                  ${currentPositions.map(pos => `<option value="${pos.id}">${pos.position_label} (Média: ${pos.average_daily_deliveries.toLocaleString()}/dia)</option>`).join('')}
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Data de Entrada</label>
+                  <input type="date" name="entryDate" value="${state.form.entryDate}" onchange="updateFormLive('entryDate', this.value)" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-zinc-400 font-bold uppercase">Margem Extra (%)</label>
+                  <input type="number" min="0" max="100" name="marginPercentage" value="${state.form.marginPercentage}" oninput="updateFormLive('marginPercentage', this.value)" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+                </div>
+              </div>
+
+              <!-- PAINEL OPERACIONAL DE CÁLCULO DILIGENTE -->
+              <div id="formCalcPanel"></div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Observações da Alocação</label>
+                <textarea name="notes" oninput="state.form.notes = this.value" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-12">${state.form.notes}</textarea>
+              </div>
+
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Salvar Inclusão</button>
+              </div>
+            </form>
+          </div>
+        `;
+        // Forçar renderização do cálculo se já houver algo
+        updateFormLive('notes', state.form.notes);
+      } 
+      
+      else if (state.activeModal === 'remove_placement') {
+        const pId = state.editingItem;
+        overlay.innerHTML = `
+          <div class="glass w-full max-w-md p-6 rounded-2xl border border-border space-y-4">
+            <div class="flex justify-between items-center border-b border-border pb-3">
+              <h3 class="text-base font-bold text-zinc-100">Marcar Música como Removida</h3>
+              <button onclick="closeModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+            </div>
+            
+            <form onsubmit="handleRemovePlacementSubmit(event)" class="space-y-4">
+              <input type="hidden" name="placementId" value="${pId}">
+              
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Data Real de Remoção</label>
+                <input type="date" name="realExitDate" required value="${state.currentDate}" class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1">
+              </div>
+
+              <div>
+                <label class="text-[10px] text-zinc-400 font-bold uppercase">Comentários da Remoção</label>
+                <textarea name="removalNotes" placeholder="Ex: Entrega finalizada de acordo com a meta." class="w-full bg-zinc-900 border border-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-violetAccent mt-1 h-20"></textarea>
+              </div>
+
+              <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-border rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="flex-1 py-2.5 bg-violetAccent hover:bg-violetAccentHover text-white rounded-xl text-xs font-bold">Confirmar Saída</button>
+              </div>
+            </form>
+          </div>
+        `;
+      }
+
+      document.body.appendChild(overlay);
+    }
+
+    // ==========================================
+    // SEÇÃO DE POSIÇÕES (ABRE MODAL ESPECIAL)
+    // ==========================================
+    function openPositionsManager(listId) {
+      const list = state.lists.find(l => l.id === listId);
+      if (!list) return;
+      state.selectedListForPositions = list;
+      
+      const overlay = document.createElement('div');
+      overlay.id = 'posManagerOverlay';
+      overlay.className = 'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto';
+      
+      // Renderizar conteúdo dinâmico
+      updatePositionsManagerContent(overlay, list);
+      
+      document.body.appendChild(overlay);
+    }
+
+    function closePositionsManager() {
+      const overlay = document.getElementById('posManagerOverlay');
+      if (overlay) overlay.remove();
+      state.selectedListForPositions = null;
+      render();
+    }
+
+    function updatePositionsManagerContent(overlay, list) {
+      const listPositions = state.positions
+        .filter(p => p.list_id === list.id)
+        .sort((a, b) => a.position_number - b.position_number);
+
+      overlay.innerHTML = `
+        <div class="glass w-full max-w-4xl p-6 rounded-2xl border border-border space-y-6 my-8">
+          <div class="flex justify-between items-center border-b border-border pb-3">
+            <div>
+              <h3 class="text-lg font-bold text-zinc-100">Gerenciar Posições da Lista</h3>
+              <p class="text-xs text-violetAccent font-semibold mt-0.5">Lista: ${list.name} (${listPositions.length} / 120 Posições)</p>
+            </div>
+            <button onclick="closePositionsManager()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Lado Esquerdo: Listagem e Cadastro Manual -->
+            <div class="space-y-6 lg:border-r lg:border-border/40 lg:pr-8">
+              <!-- Cadastro Manual -->
+              <div class="p-4 bg-zinc-900/40 border border-border rounded-xl space-y-3">
+                <h4 class="text-xs font-bold uppercase text-zinc-300">Nova Posição Individual</h4>
+                
+                <form onsubmit="addManualPosition(event)" class="grid grid-cols-3 gap-2">
+                  <div class="col-span-2">
+                    <label class="text-[8px] text-zinc-500 font-bold uppercase">Label Posição</label>
+                    <input type="text" name="posLabel" placeholder="Ex: TOP 33" required class="w-full bg-zinc-900 border border-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 mt-1 focus:outline-none focus:border-violetAccent">
+                  </div>
+                  <div>
+                    <label class="text-[8px] text-zinc-500 font-bold uppercase">Média Diária</label>
+                    <input type="number" name="posAverage" placeholder="Ex: 505" required class="w-full bg-zinc-900 border border-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 mt-1 focus:outline-none focus:border-violetAccent">
+                  </div>
+                  <div class="col-span-3">
+                    <label class="text-[8px] text-zinc-500 font-bold uppercase">Número de Ordenação (Opcional)</label>
+                    <input type="number" name="posNum" placeholder="Ex: 33" class="w-full bg-zinc-900 border border-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 mt-1 focus:outline-none focus:border-violetAccent">
+                  </div>
+                  <div class="col-span-3 flex justify-end">
+                    <button type="submit" class="px-4 py-1.5 bg-violetAccent hover:bg-violetAccentHover text-white text-[10px] font-bold rounded-lg transition-colors">
+                      Adicionar Posição
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Posições Atuais -->
+              <div class="space-y-3">
+                <h4 class="text-xs font-bold uppercase text-zinc-300">Posições Cadastradas</h4>
+                <div class="max-h-[250px] overflow-y-auto border border-border/50 rounded-xl">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-border bg-zinc-900/50 text-zinc-500 text-[9px] uppercase">
+                        <th class="p-3">Posição</th>
+                        <th class="p-3 text-center">Ordenação</th>
+                        <th class="p-3 text-center">Média diária/dia</th>
+                        <th class="p-3 text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/30">
+                      ${listPositions.length === 0 ? `
+                        <tr><td colSpan="4" class="p-4 text-center text-zinc-500">Nenhuma posição cadastrada.</td></tr>
+                      ` : listPositions.map(pos => `
+                        <tr class="hover:bg-zinc-900/10">
+                          <td class="p-3 font-bold text-zinc-300">${pos.position_label}</td>
+                          <td class="p-3 text-center text-zinc-400">${pos.position_number}</td>
+                          <td class="p-3 text-center font-bold text-zinc-200">${pos.average_daily_deliveries.toLocaleString()}</td>
+                          <td class="p-3 text-right">
+                            <button onclick="deletePosition('${pos.id}'); updatePositionsManagerContent(document.getElementById('posManagerOverlay'), state.selectedListForPositions);" class="text-red-400 hover:underline text-[10px]">Excluir</button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lado Direito: Importação Lote -->
+            <div class="space-y-4">
+              <div class="p-4 bg-zinc-900/40 border border-border rounded-xl space-y-3">
+                <h4 class="text-xs font-bold uppercase text-zinc-300">Importar em Massa (Colar Texto)</h4>
+                <p class="text-[10px] text-zinc-500 leading-relaxed">
+                  Cole uma lista de posições e médias diárias. Cada linha é uma posição.
+                  <br><strong>Exemplo:</strong>
+                  <br>TOP 1,2000
+                  <br>TOP 2,1700
+                  <br>TOP 33,505
+                </p>
+                <form onsubmit="importPositionsBulk(event); updatePositionsManagerContent(document.getElementById('posManagerOverlay'), state.selectedListForPositions);" class="space-y-3">
+                  <textarea name="bulkText" rows="6" placeholder="Cole a lista aqui..." class="w-full bg-zinc-900 border border-border rounded-xl p-3 text-xs focus:outline-none focus:border-violetAccent text-zinc-200 font-mono"></textarea>
+                  <div class="flex justify-end">
+                    <button type="submit" class="px-5 py-2 bg-violetAccent hover:bg-violetAccentHover text-white text-xs font-bold rounded-xl transition-colors">
+                      Importar Posições
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="p-4 bg-zinc-900/20 border border-border/50 rounded-xl text-[10px] text-zinc-500 space-y-1">
+                <h4 class="font-bold text-zinc-400">Instruções Importantes</h4>
+                <p>• Máximo de 120 posições por lista.</p>
+                <p>• Formato esperado por linha: "Nome_da_Posição, Média_Diária".</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-border flex justify-end">
+            <button onclick="closePositionsManager()" class="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-colors">Fechar</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // SEÇÃO DE HISTÓRICO DE MÚSICA
+    // ==========================================
+    function openHistoryModal(trackId) {
+      const track = state.tracks.find(t => t.id === trackId);
+      if (!track) return;
+      state.selectedTrackForHistory = track;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'historyModalOverlay';
+      overlay.className = 'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto';
+
+      const trackPlacements = state.placements
+        .filter(p => p.track_id === trackId)
+        .map(p => {
+          const listObj = state.lists.find(l => l.id === p.list_id);
+          const posObj = state.positions.find(pos => pos.id === p.position_id);
+          return {
+            ...p,
+            listName: listObj ? listObj.name : 'Desconhecida',
+            positionLabel: posObj ? posObj.position_label : 'Desconhecida'
+          };
+        });
+
+      overlay.innerHTML = `
+        <div class="glass w-full max-w-3xl p-6 rounded-2xl border border-border space-y-4">
+          <div class="flex justify-between items-center border-b border-border pb-3">
+            <div>
+              <h3 class="text-base font-bold text-zinc-100">Histórico de Alocações</h3>
+              <p class="text-xs text-violetAccent font-semibold mt-0.5">${track.artist_name} — ${track.track_name}</p>
+            </div>
+            <button onclick="closeHistoryModal()" class="text-zinc-500 hover:text-white">${ICONS.close}</button>
+          </div>
+
+          <div class="space-y-4">
+            ${trackPlacements.length === 0 ? `
+              <div class="text-center py-12 text-zinc-500 text-sm">Esta música ainda não foi alocada em nenhuma lista.</div>
+            ` : `
+              <div class="overflow-x-auto border border-border/50 rounded-xl">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-border bg-zinc-900/40 text-zinc-400 font-semibold uppercase text-[9px]">
+                      <th class="p-3">Lista / Posição</th>
+                      <th class="p-3 text-center">Média diária</th>
+                      <th class="p-3 text-center">Período (Dias)</th>
+                      <th class="p-3 text-center">Datas In / Out</th>
+                      <th class="p-3 text-center">Volume Estimado</th>
+                      <th class="p-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border/40">
+                    ${trackPlacements.map(item => `
+                      <tr class="hover:bg-zinc-900/10">
+                        <td class="p-3">
+                          <div class="font-bold text-zinc-200">${item.listName}</div>
+                          <div class="text-violetAccent text-[9px] mt-0.5">${item.positionLabel}</div>
+                        </td>
+                        <td class="p-3 text-center text-zinc-300 font-semibold">${item.average_daily_deliveries}</td>
+                        <td class="p-3 text-center text-zinc-300">${item.required_days} dias</td>
+                        <td class="p-3 text-center text-[10px] text-zinc-400 space-y-0.5">
+                          <div>In: ${item.entry_date.split('-').reverse().join('/')}</div>
+                          <div>Out: ${item.estimated_exit_date.split('-').reverse().join('/')}</div>
+                          ${item.real_exit_date ? `<div class="text-red-400 font-semibold">Rem: ${item.real_exit_date.split('-').reverse().join('/')}</div>` : ''}
+                        </td>
+                        <td class="p-3 text-center text-zinc-200 font-bold">${item.estimated_deliveries.toLocaleString()}</td>
+                        <td class="p-3 text-center">
+                          <span class="px-2 py-0.5 rounded-full font-bold text-[8px] border ${
+                            item.status === 'active' ? 'bg-violetAccent/10 text-violetAccent border-violetAccent/20' : 'bg-zinc-800 text-zinc-500 border-border'
+                          }">${item.status.toUpperCase()}</span>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+
+          <div class="pt-3 border-t border-border flex justify-end">
+            <button onclick="closeHistoryModal()" class="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-colors">Fechar</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+    }
+
+    function closeHistoryModal() {
+      const overlay = document.getElementById('historyModalOverlay');
+      if (overlay) overlay.remove();
+      state.selectedTrackForHistory = null;
+    }
+
+    // --- INICIALIZAÇÃO DA APLICAÇÃO ---
+    window.onload = function() {
+      // Pequeno timeout para dar sensação de aplicativo real
+      setTimeout(() => {
+        render();
+      }, 300);
+    };
+  </script>
+</body>
+</html>

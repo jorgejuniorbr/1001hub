@@ -1,5 +1,3 @@
-"use client";
-
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,28 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 function Header() {
-  // Função ultra-inteligente para rolar a página baseada no texto que
-o usuário vê
-  const scrollToSectionByText = (textToFind: string) => {
-    const headings = Array.from(document.querySelectorAll("h1, h2, h3,
-h4, span, p"));
-
-    // Procura na página algum título que tenha a palavra que clicamos
-(ex: "works", "plan", "ranking")
-    const target = headings.find(el =>
-      el.textContent?.toLowerCase().includes(textToFind.toLowerCase())
-    );
-
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   return (
     <header className="w-full py-4 px-6 border-b border-zinc-800
 bg-black flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-2 cursor-pointer"
-onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+      <div className="flex items-center gap-2">
         <div className="w-6 h-6 bg-emerald-500 rounded-full flex
 items-center justify-center font-bold text-black text-xs">1</div>
         <span className="font-bold text-white text-lg
@@ -45,27 +25,18 @@ tracking-wider">1001HUB</span>
       </div>
 
       <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
-        <a href="#" onClick={(e) => { e.preventDefault();
-window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-className="hover:text-white transition-colors">Home</a>
-        <a href="#" onClick={(e) => { e.preventDefault();
-scrollToSectionByText('how it works'); }} className="hover:text-white
+        <a href="#" className="hover:text-white transition-colors">Home</a>
+        <a href="#how-it-works" className="hover:text-white
 transition-colors">How it works</a>
-        <a href="#" onClick={(e) => { e.preventDefault();
-scrollToSectionByText('dj rankings'); }} className="hover:text-white
+        <a href="#rankings" className="hover:text-white
 transition-colors">Global DJ Rankings</a>
-        <a href="#" onClick={(e) => { e.preventDefault();
-scrollToSectionByText('one plan'); }} className="hover:text-white
+        <a href="#pricing" className="hover:text-white
 transition-colors">Pricing</a>
-        <a href="#" onClick={(e) => { e.preventDefault();
-scrollToSectionByText('frequently'); }} className="hover:text-white
-transition-colors">FAQ</a>
+        <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
       </nav>
 
       <a
-        href="#"
-        onClick={(e) => { e.preventDefault();
-scrollToSectionByText('one plan'); }}
+        href="#pricing"
         className="bg-emerald-500 hover:bg-emerald-400 text-black
 text-sm font-semibold py-2 px-4 rounded-full transition-all
 text-center"

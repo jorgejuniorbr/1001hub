@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Código do Menu (Header) direto aqui
+// Menu Superior (Header) Corrigido com todos os links funcionais
 function Header() {
   return (
     <header className="w-full py-4 px-6 border-b border-zinc-800
@@ -22,24 +22,33 @@ items-center justify-center font-bold text-black text-xs">1</div>
         <span className="font-bold text-white text-lg
 tracking-wider">1001HUB</span>
       </div>
+
+      {/* Menu do centro com todas as opções internacionais e o DJ Rankings */}
       <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
         <a href="#" className="hover:text-white transition-colors">Home</a>
-        <a href="#features" className="hover:text-white
-transition-colors">Features</a>
+        <a href="#how-it-works" className="hover:text-white
+transition-colors">How it works</a>
+        <a href="#rankings" className="hover:text-white
+transition-colors">Global DJ Rankings</a>
         <a href="#pricing" className="hover:text-white
 transition-colors">Pricing</a>
         <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
       </nav>
-      <button className="bg-emerald-500 hover:bg-emerald-400
-text-black text-sm font-semibold py-2 px-4 rounded-full
-transition-all">
-        Get Started
-      </button>
+
+      {/* Botão de Enviar música para aprovação (Submit) */}
+      <a
+        href="#submit"
+        className="bg-emerald-500 hover:bg-emerald-400 text-black
+text-sm font-semibold py-2 px-4 rounded-full transition-all
+text-center"
+      >
+        Submit Music
+      </a>
     </header>
   );
 }
 
-// Código do Rodapé (Footer) direto aqui
+// Rodapé (Footer)
 function Footer() {
   return (
     <footer className="w-full py-8 px-6 border-t border-zinc-800
@@ -63,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

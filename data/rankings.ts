@@ -1,0 +1,88 @@
+import type { RankingsMap } from "@/types";
+
+export const rankings: RankingsMap = {
+  BR: [
+    ["Alok", "22.4M", "+2"],
+    ["Vintage Culture", "12.8M", "="],
+    ["Dubdogz", "5.9M", "+1"],
+    ["Felguk", "3.1M", "-1"],
+    ["Bhaskar", "2.7M", "+3"],
+  ],
+  US: [
+    ["John Summit", "9.8M", "+1"],
+    ["Skrillex", "18.7M", "="],
+    ["Diplo", "15.2M", "-1"],
+    ["Kaskade", "4.9M", "+2"],
+    ["Illenium", "7.6M", "="],
+  ],
+  GB: [
+    ["Calvin Harris", "47.1M", "="],
+    ["Fred again..", "18.2M", "+1"],
+    ["Disclosure", "13.4M", "="],
+    ["Duke Dumont", "9.4M", "-1"],
+    ["James Hype", "8.8M", "+3"],
+  ],
+  NL: [
+    ["Martin Garrix", "24.0M", "="],
+    ["Tiësto", "35.4M", "="],
+    ["Armin van Buuren", "15.0M", "+1"],
+    ["Afrojack", "27.3M", "-1"],
+    ["Oliver Heldens", "8.9M", "+2"],
+  ],
+  DE: [
+    ["Robin Schulz", "25.8M", "="],
+    ["Boris Brejcha", "4.5M", "+1"],
+    ["Purple Disco Machine", "12.3M", "="],
+    ["Claptone", "5.8M", "-1"],
+    ["Paul van Dyk", "2.1M", "+2"],
+  ],
+  ES: [
+    ["Danny Avila", "1.8M", "+1"],
+    ["Wade", "1.3M", "="],
+    ["Indira Paganotto", "1.1M", "+3"],
+    ["Andres Campo", "690K", "="],
+    ["Oscar Mulero", "520K", "-1"],
+  ],
+  FR: [
+    ["David Guetta", "76.9M", "="],
+    ["DJ Snake", "35.6M", "+1"],
+    ["Kungs", "10.4M", "="],
+    ["Bob Sinclar", "5.7M", "-1"],
+    ["Tchami", "3.6M", "+2"],
+  ],
+  IT: [
+    ["Meduza", "21.8M", "="],
+    ["Anyma", "4.7M", "+2"],
+    ["Benny Benassi", "7.2M", "="],
+    ["Mace", "3.4M", "-1"],
+    ["Joseph Capriati", "780K", "+1"],
+  ],
+  BE: [
+    ["Lost Frequencies", "31.4M", "="],
+    ["Dimitri Vegas & Like Mike", "10.2M", "+1"],
+    ["Charlotte de Witte", "2.6M", "="],
+    ["Amelie Lens", "1.7M", "="],
+    ["The Magician", "1.4M", "-1"],
+  ],
+  MX: [
+    ["Mariana BO", "1.1M", "+1"],
+    ["Tom & Collins", "880K", "="],
+    ["Sak Noel", "2.3M", "="],
+    ["Le Twins", "720K", "+2"],
+    ["Broz Rdz", "410K", "-1"],
+  ],
+  AU: [
+    ["FISHER", "13.2M", "="],
+    ["RÜFÜS DU SOL", "12.4M", "="],
+    ["Dom Dolla", "11.7M", "+1"],
+    ["Timmy Trumpet", "9.1M", "-1"],
+    ["Flume", "8.6M", "="],
+  ],
+  SE: [
+    ["Swedish House Mafia", "17.5M", "="],
+    ["Alesso", "16.8M", "+1"],
+    ["Eric Prydz", "3.7M", "="],
+    ["Galantis", "11.6M", "-1"],
+    ["Otto Knows", "2.4M", "+2"],
+  ],
+};
